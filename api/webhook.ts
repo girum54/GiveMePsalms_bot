@@ -29,8 +29,13 @@ function isValidTelegramMessage(update: TelegramUpdate | undefined): update is T
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     res.status(405).json({ ok: false, error: 'Method not allowed' });
+    return;
+  }
+
+  if (req.method === 'GET') {
+    res.status(200).json({ ok: true, message: 'Webhook is alive' });
     return;
   }
 
