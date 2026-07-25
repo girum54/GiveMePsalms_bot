@@ -28,32 +28,17 @@ function getCommand(text: string): { command: string; arg?: string } {
   return { command: '' };
 }
 
-function escapeTelegramMarkdown(text: string): string {
-  return text.replace(/([_\*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
-}
-
-function quoteTelegramText(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => (line.trim() === '' ? '' : `> ${line}`))
-    .join('\n');
-}
-
 async function sendTelegramMessage(chatId: number, text: string): Promise<TelegramSendMessageResponse> {
   if (!TELEGRAM_BOT_TOKEN) {
     throw new Error('TELEGRAM_BOT_TOKEN is not configured');
   }
-
-  const escaped = escapeTelegramMarkdown(text);
-  const quoted = quoteTelegramText(escaped);
 
   const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      text: quoted,
-      parse_mode: 'MarkdownV2',
+      text,
       disable_web_page_preview: true,
     }),
   });
