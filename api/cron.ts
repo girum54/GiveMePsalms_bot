@@ -1,6 +1,6 @@
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, users } from '../src/db/index.js';
+import { getDb, initializeDatabase, users } from '../src/db/index.js';
 import psalms from '../assets/psalms.json' with { type: 'json' };
 
 type PsalmChapter = {
@@ -45,7 +45,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const utcHour = Number(req.query.hour ?? new Date().getUTCHours());
-  const db = getDb();
+  await initializeDatabase();
+  const db = await getDb();
 
   (async () => {
     try {

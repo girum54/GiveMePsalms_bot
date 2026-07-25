@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { getDb, users } from '../db/index.js';
+import { getDb, initializeDatabase, users } from '../db/index.js';
 
 export type TelegramMessage = {
   chat?: { id?: number; username?: string; first_name?: string; last_name?: string };
@@ -75,7 +75,8 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
   const chatId = message?.chat?.id;
   if (!chatId) return;
 
-  const db = getDb();
+  await initializeDatabase();
+  const db = await getDb();
 
   await upsertUserFromMessage(message);
 
