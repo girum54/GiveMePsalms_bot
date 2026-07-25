@@ -16,7 +16,11 @@ export function getDb(): DatabaseInstance {
     throw new Error('DATABASE_URL environment variable is required');
   }
 
-  const client = postgres(connectionString, { max: 1 });
+  const client = postgres(connectionString, {
+    max: 1,
+    ssl: 'require',
+  });
+
   dbInstance = drizzle(client, { schema });
   return dbInstance;
 }
