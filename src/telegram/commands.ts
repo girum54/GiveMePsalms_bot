@@ -1,5 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb, initializeDatabase, users } from '../db/index.js';
+import { formatPsalmChapter } from '../psalms/format.js';
+import psalms from '../../assets/psalms.json' with { type: 'json' };
 
 export type TelegramMessage = {
   chat?: { id?: number; username?: string; first_name?: string; last_name?: string };
@@ -121,8 +123,23 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
         }
         await sendTelegramMessage(chatId, `Delivery time set to UTC ${hour}:00.`);
       }
+    } else if (command === '/chapter') {
+      if (!db) {
+        await sendTelegramMessage(chatId, 'Chapter preview is unavailable right now.');
+      } else {
+        const user = await db.select().from(users).where(eq(users.telegramId, String(chatId))).limit(1);
+        const chapterNumber = user[0]?.currentChapter ?? 1;
+        const chapter = (psalms as { chapter: number; lines: string[] }[]).find((entry) => entry.chapter === chapterNumber);
+
+        if (!chapter) {
+          await sendTelegramMessage(chatId, `Psalm ${chapterNumber} is not available yet.`);
+        } else {
+          const formatted = formatPsalmChapter(chapter);
+          await sendTelegramMessage(chatId, `Psalm ${chapterNumber}\n\n${formatted}`);
+        }
+      }
     } else {
-      await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, or /time <hour> to set a delivery hour.');
+      await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, /time <hour> to set a delivery hour, or /chapter to see your current Psalm.');
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'Unknown error';
