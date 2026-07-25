@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { handleTelegramCommand } from '../src/telegram/commands.js';
+import { handleTelegramCallback, handleTelegramCommand } from '../src/telegram/commands.js';
 
 export type VercelRequest = IncomingMessage & {
   query?: Record<string, string | string[]>;
@@ -22,10 +22,22 @@ type TelegramUpdate = {
     text?: string;
     date?: number;
   };
+  callback_query?: {
+    id: string;
+    data?: string;
+    message?: { chat?: { id?: number } };
+  };
 };
 
-function isValidTelegramMessage(update: TelegramUpdate | undefined): update is TelegramUpdate & { message: NonNullable<TelegramUpdate['message']> } {
+type TelegramMessageUpdate = TelegramUpdate & { message: NonNullable<TelegramUpdate['message']> };
+type TelegramCallbackUpdate = TelegramUpdate & { callback_query: NonNullable<TelegramUpdate['callback_query']> };
+
+function isValidTelegramMessage(update: TelegramUpdate | undefined): update is TelegramMessageUpdate {
   return Boolean(update?.message?.chat?.id && update.message.text);
+}
+
+function isValidCallbackQuery(update: TelegramUpdate | undefined): update is TelegramCallbackUpdate {
+  return Boolean(update?.callback_query?.id && update.callback_query.data && update.callback_query.message?.chat?.id);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -41,18 +53,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const update = req.body as TelegramUpdate;
 
-  if (!isValidTelegramMessage(update)) {
-    res.status(200).json({ ok: true });
-    return;
-  }
-
-  const message = update.message;
-  const chatId = message.chat?.id;
-  const text = message.text ?? '';
-
   try {
-    await handleTelegramCommand(message);
+    if (isValidCallbackQuery(update)) {
+      await handleTelegramCallback(update.callback_query);
+      res.status(200).json({ ok: true });
+      return;
+    }
 
+    if (!isValidTelegramMessage(update)) {
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    await handleTelegramCommand(update.message);
     res.status(200).json({ ok: true });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : 'Unknown error';
