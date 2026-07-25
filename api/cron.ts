@@ -1,0 +1,84 @@
+import { and, eq, isNotNull } from 'drizzle-orm';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { db, users } from '../src/db/index.js';
+import psalms from '../assets/psalms.json' with { type: 'json' };
+
+type PsalmChapter = {
+  chapter: number;
+  lines: string[];
+};
+
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const CHAPTER_COUNT = 150;
+const psalmsData = psalms as PsalmChapter[];
+
+function formatChapter(chapter: PsalmChapter): string {
+  const lines = chapter.lines.map((line) => line.trim()).filter(Boolean);
+  return lines.join('\n');
+}
+
+async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
+  if (!TELEGRAM_BOT_TOKEN) {
+    throw new Error('TELEGRAM_BOT_TOKEN is not configured');
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Telegram send failed: ${response.status}`);
+  }
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.status(405).json({ ok: false, error: 'Method not allowed' });
+    return;
+  }
+
+  const utcHour = Number(req.query.hour ?? new Date().getUTCHours());
+
+  (async () => {
+    try {
+      const scheduledUsers = await db
+        .select()
+        .from(users)
+        .where(and(
+          eq(users.isPaused, false),
+          isNotNull(users.deliveryHour),
+          eq(users.deliveryHour, utcHour),
+        ));
+
+      for (const user of scheduledUsers) {
+        const deliveryHour = user.deliveryHour ?? 0;
+        if (deliveryHour !== utcHour) continue;
+
+        const chapterNumber = user.currentChapter && user.currentChapter > 0 ? user.currentChapter : 1;
+        const chapter = psalmsData.find((entry) => entry.chapter === chapterNumber);
+        const text = chapter
+          ? `Psalm ${chapterNumber}\n\n${formatChapter(chapter)}`
+          : `Psalm ${chapterNumber} is not available yet.`;
+
+        await sendTelegramMessage(user.telegramId, text);
+
+        const nextChapter = chapterNumber >= CHAPTER_COUNT ? 1 : chapterNumber + 1;
+        await db.update(users)
+          .set({ currentChapter: nextChapter, updatedAt: new Date() })
+          .where(eq(users.telegramId, user.telegramId));
+      }
+
+      res.status(200).json({ ok: true, delivered: scheduledUsers.length });
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ ok: false, error: messageText });
+    }
+  })();
+}
