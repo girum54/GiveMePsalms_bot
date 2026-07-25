@@ -165,14 +165,21 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
         await sendTelegramMessage(chatId, 'Chapter preview is unavailable right now.');
       } else {
         const user = await db.select().from(users).where(eq(users.telegramId, String(chatId))).limit(1);
-        const chapterNumber = user[0]?.currentChapter ?? 1;
+        const currentChapter = user[0]?.currentChapter ?? 1;
+        const requestedChapter = arg && /^[0-9]+$/.test(arg.trim()) ? Number(arg.trim()) : undefined;
+        const chapterNumber = requestedChapter ?? currentChapter;
         const chapter = (psalms as { chapter: number; lines: string[] }[]).find((entry) => entry.chapter === chapterNumber);
 
         if (!chapter) {
-          await sendTelegramMessage(chatId, `Psalm ${chapterNumber} is not available yet.`);
+          if (requestedChapter) {
+            await sendTelegramMessage(chatId, `Psalm ${requestedChapter} is not available yet.`);
+          } else {
+            await sendTelegramMessage(chatId, `Psalm ${chapterNumber} is not available yet.`);
+          }
         } else {
           const formatted = formatPsalmChapter(chapter);
-          await sendTelegramMessage(chatId, `Psalm ${chapterNumber}\n\n${formatted}`);
+          const previewLabel = requestedChapter ? `Previewing Psalm ${chapterNumber}` : `Psalm ${chapterNumber}`;
+          await sendTelegramMessage(chatId, `${previewLabel}\n\n${formatted}`);
         }
       }
     } else {
