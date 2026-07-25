@@ -45,13 +45,11 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<Telegr
   return response.json() as Promise<TelegramSendMessageResponse>;
 }
 
-export async function upsertUserFromMessage(message: TelegramMessage | undefined): Promise<void> {
+export async function upsertUserFromMessage(message: TelegramMessage | undefined, db: Awaited<ReturnType<typeof getDb>>): Promise<void> {
   const chatId = message?.chat?.id;
   const username = message?.chat?.username ?? message?.chat?.first_name ?? 'unknown';
 
   if (!chatId) return;
-
-  const db = getDb();
 
   await db.insert(users)
     .values({
@@ -78,7 +76,7 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
   await initializeDatabase();
   const db = await getDb();
 
-  await upsertUserFromMessage(message);
+  await upsertUserFromMessage(message, db);
 
   const text = message?.text ?? '';
   const { command, arg } = getCommand(text);
