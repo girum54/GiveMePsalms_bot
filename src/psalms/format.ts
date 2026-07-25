@@ -20,13 +20,13 @@ function splitPoeticLine(text: string): string[] {
       const next = normalized[i + 1];
       if (next && /[A-Za-z\u0590-\u05FF]/.test(next)) {
         parts.push(current);
-        current = '    ';
+        current = '\u00A0\u00A0\u00A0\u00A0';
       }
     }
   }
 
   if (current.trim()) {
-    parts.push(current.trim());
+    parts.push(current);
   }
 
   return parts.length > 0 ? parts : [normalized];
@@ -38,5 +38,5 @@ export function formatPsalmChapter(chapter: PsalmChapter): string {
     .filter(Boolean)
     .flatMap((line) => splitPoeticLine(line));
 
-  return renderedLines.join('\n');
+  return renderedLines.join('\n\n');
 }
