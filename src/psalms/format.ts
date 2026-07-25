@@ -38,5 +38,5 @@ export function formatPsalmChapter(chapter: PsalmChapter): string {
     .filter(Boolean)
     .flatMap((line) => splitPoeticLine(line));
 
-  return renderedLines.join('\n\n');
+  return renderedLines.join('\n');
 }
