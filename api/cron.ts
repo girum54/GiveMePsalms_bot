@@ -1,6 +1,7 @@
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, initializeDatabase, users } from '../src/db/index.js';
+import { formatPsalmChapter } from '../src/psalms/format.js';
 import psalms from '../assets/psalms.json' with { type: 'json' };
 
 type PsalmChapter = {
@@ -13,8 +14,7 @@ const CHAPTER_COUNT = 150;
 const psalmsData = psalms as PsalmChapter[];
 
 function formatChapter(chapter: PsalmChapter): string {
-  const lines = chapter.lines.map((line) => line.trim()).filter(Boolean);
-  return lines.join('\n');
+  return formatPsalmChapter(chapter);
 }
 
 async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
