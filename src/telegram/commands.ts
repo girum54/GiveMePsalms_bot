@@ -42,7 +42,12 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<Telegr
     }),
   });
 
-  return response.json() as Promise<TelegramSendMessageResponse>;
+  const payload = await response.json() as TelegramSendMessageResponse;
+  if (!payload.ok) {
+    throw new Error(payload.description ?? 'Telegram send failed');
+  }
+
+  return payload;
 }
 
 export async function upsertUserFromMessage(message: TelegramMessage | undefined, db: Awaited<ReturnType<typeof getDb>>): Promise<void> {
