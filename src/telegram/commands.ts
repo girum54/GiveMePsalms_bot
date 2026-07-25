@@ -92,35 +92,40 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
   const text = message?.text ?? '';
   const { command, arg } = getCommand(text);
 
-  if (command === '/start') {
-    await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot! Send /pause to stop deliveries, /resume to continue, or /time <hour> to choose an hourly delivery time in UTC.');
-  } else if (command === '/pause') {
-    if (db) {
-      await db.update(users)
-        .set({ isPaused: true, updatedAt: new Date() })
-        .where(eq(users.telegramId, String(chatId)));
-    }
-    await sendTelegramMessage(chatId, 'Deliveries are now paused.');
-  } else if (command === '/resume') {
-    if (db) {
-      await db.update(users)
-        .set({ isPaused: false, updatedAt: new Date() })
-        .where(eq(users.telegramId, String(chatId)));
-    }
-    await sendTelegramMessage(chatId, 'Deliveries are resumed.');
-  } else if (command === '/time') {
-    const hour = Number(arg);
-    if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
-      await sendTelegramMessage(chatId, 'Please provide a UTC hour between 0 and 23. Example: /time 6');
-    } else {
+  try {
+    if (command === '/start') {
+      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot! Send /pause to stop deliveries, /resume to continue, or /time <hour> to choose an hourly delivery time in UTC.');
+    } else if (command === '/pause') {
       if (db) {
         await db.update(users)
-          .set({ deliveryHour: hour, updatedAt: new Date() })
+          .set({ isPaused: true, updatedAt: new Date() })
           .where(eq(users.telegramId, String(chatId)));
       }
-      await sendTelegramMessage(chatId, `Delivery time set to UTC ${hour}:00.`);
+      await sendTelegramMessage(chatId, 'Deliveries are now paused.');
+    } else if (command === '/resume') {
+      if (db) {
+        await db.update(users)
+          .set({ isPaused: false, updatedAt: new Date() })
+          .where(eq(users.telegramId, String(chatId)));
+      }
+      await sendTelegramMessage(chatId, 'Deliveries are resumed.');
+    } else if (command === '/time') {
+      const hour = Number(arg);
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+        await sendTelegramMessage(chatId, 'Please provide a UTC hour between 0 and 23. Example: /time 6');
+      } else {
+        if (db) {
+          await db.update(users)
+            .set({ deliveryHour: hour, updatedAt: new Date() })
+            .where(eq(users.telegramId, String(chatId)));
+        }
+        await sendTelegramMessage(chatId, `Delivery time set to UTC ${hour}:00.`);
+      }
+    } else {
+      await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, or /time <hour> to set a delivery hour.');
     }
-  } else {
-    await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, or /time <hour> to set a delivery hour.');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown error';
+    await sendTelegramMessage(chatId, `Bot error: ${reason}`);
   }
 }
