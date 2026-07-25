@@ -112,9 +112,10 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
       }
       await sendTelegramMessage(chatId, 'Deliveries are resumed.');
     } else if (command === '/time') {
-      const hour = Number(arg);
-      if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
-        await sendTelegramMessage(chatId, 'Please provide a UTC hour between 0 and 23. Example: /time 6');
+      const hourArg = arg?.trim();
+      const hour = hourArg && /^[0-9]{1,2}$/.test(hourArg) ? Number(hourArg) : NaN;
+      if (Number.isNaN(hour) || hour < 0 || hour > 23) {
+        await sendTelegramMessage(chatId, 'Please provide a valid UTC hour between 0 and 23. Example: /time 6');
       } else {
         if (db) {
           await db.update(users)
