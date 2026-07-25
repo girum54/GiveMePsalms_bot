@@ -94,7 +94,7 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
 
   try {
     if (command === '/start') {
-      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot! Send /pause to stop deliveries, /resume to continue, or /time <hour> to choose an hourly delivery time in UTC.');
+      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot! Send /pause to stop deliveries, /resume to continue, or /time &lt;hour&gt; to choose an hourly delivery time in UTC.');
     } else if (command === '/pause') {
       if (db) {
         await db.update(users)
