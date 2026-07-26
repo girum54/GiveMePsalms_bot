@@ -77,9 +77,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         eq(users.deliveryHour, utcHour),
       ));
 
+    const results: Array<{ telegramId: string; deliveryHour: number | null; success: boolean; error?: string }> = [];
+
     for (const user of scheduledUsers) {
-      const deliveryHour = user.deliveryHour ?? 0;
-      if (deliveryHour !== utcHour) continue;
+      const deliveryHour = user.deliveryHour ?? null;
+      if (deliveryHour === null || deliveryHour !== utcHour) {
+        results.push({ telegramId: user.telegramId, deliveryHour, success: false, error: 'hour-mismatch' });
+        continue;
+      }
 
       const chapterNumber = user.currentChapter && user.currentChapter > 0 ? user.currentChapter : 1;
       const chapter = psalmsData.find((entry) => entry.chapter === chapterNumber);
@@ -87,15 +92,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? `Psalm ${chapterNumber}\n\n${formatChapter(chapter)}`
         : `Psalm ${chapterNumber} is not available yet.`;
 
-      await sendTelegramMessage(user.telegramId, text);
+      try {
+        await sendTelegramMessage(user.telegramId, text);
 
-      const nextChapter = chapterNumber >= CHAPTER_COUNT ? 1 : chapterNumber + 1;
-      await db.update(users)
-        .set({ currentChapter: nextChapter, updatedAt: new Date() })
-        .where(eq(users.telegramId, user.telegramId));
+        const nextChapter = chapterNumber >= CHAPTER_COUNT ? 1 : chapterNumber + 1;
+        await db.update(users)
+          .set({ currentChapter: nextChapter, updatedAt: new Date() })
+          .where(eq(users.telegramId, user.telegramId));
+
+        results.push({ telegramId: user.telegramId, deliveryHour, success: true });
+      } catch (sendError) {
+        const errMsg = sendError instanceof Error ? sendError.message : String(sendError);
+        results.push({ telegramId: user.telegramId, deliveryHour, success: false, error: errMsg });
+        // continue to next user without failing the whole run
+      }
     }
 
-    res.status(200).json({ ok: true, delivered: scheduledUsers.length, hour: utcHour, matchedUsers: scheduledUsers.length, debug: debugInfo });
+    const deliveredCount = results.filter((r) => r.success).length;
+    res.status(200).json({ ok: true, delivered: deliveredCount, hour: utcHour, matchedUsers: scheduledUsers.length, results, debug: debugInfo });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ ok: false, error: messageText });
