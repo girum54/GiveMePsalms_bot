@@ -47,39 +47,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   await initializeDatabase();
   const db = await getDb();
 
-  (async () => {
-    try {
-      const scheduledUsers = await db
-        .select()
-        .from(users)
-        .where(and(
-          eq(users.isPaused, false),
-          isNotNull(users.deliveryHour),
-          eq(users.deliveryHour, utcHour),
-        ));
+  try {
+    const scheduledUsers = await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.isPaused, false),
+        isNotNull(users.deliveryHour),
+        eq(users.deliveryHour, utcHour),
+      ));
 
-      for (const user of scheduledUsers) {
-        const deliveryHour = user.deliveryHour ?? 0;
-        if (deliveryHour !== utcHour) continue;
+    for (const user of scheduledUsers) {
+      const deliveryHour = user.deliveryHour ?? 0;
+      if (deliveryHour !== utcHour) continue;
 
-        const chapterNumber = user.currentChapter && user.currentChapter > 0 ? user.currentChapter : 1;
-        const chapter = psalmsData.find((entry) => entry.chapter === chapterNumber);
-        const text = chapter
-          ? `Psalm ${chapterNumber}\n\n${formatChapter(chapter)}`
-          : `Psalm ${chapterNumber} is not available yet.`;
+      const chapterNumber = user.currentChapter && user.currentChapter > 0 ? user.currentChapter : 1;
+      const chapter = psalmsData.find((entry) => entry.chapter === chapterNumber);
+      const text = chapter
+        ? `Psalm ${chapterNumber}\n\n${formatChapter(chapter)}`
+        : `Psalm ${chapterNumber} is not available yet.`;
 
-        await sendTelegramMessage(user.telegramId, text);
+      await sendTelegramMessage(user.telegramId, text);
 
-        const nextChapter = chapterNumber >= CHAPTER_COUNT ? 1 : chapterNumber + 1;
-        await db.update(users)
-          .set({ currentChapter: nextChapter, updatedAt: new Date() })
-          .where(eq(users.telegramId, user.telegramId));
-      }
-
-      res.status(200).json({ ok: true, delivered: scheduledUsers.length });
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Unknown error';
-      res.status(500).json({ ok: false, error: messageText });
+      const nextChapter = chapterNumber >= CHAPTER_COUNT ? 1 : chapterNumber + 1;
+      await db.update(users)
+        .set({ currentChapter: nextChapter, updatedAt: new Date() })
+        .where(eq(users.telegramId, user.telegramId));
     }
-  })();
+
+    res.status(200).json({ ok: true, delivered: scheduledUsers.length });
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ ok: false, error: messageText });
+  }
 }
