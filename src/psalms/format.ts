@@ -17,8 +17,13 @@ function splitPoeticLine(text: string): string[] {
     current += char;
 
     if (char === ',' || char === ';') {
+      const quoteChars = '"“”' + "'‘’";
       const next = normalized[i + 1];
-      if (next && /[A-Za-z\u0590-\u05FF]/.test(next)) {
+      const nextAfterQuote = normalized[i + 2];
+      const isTextStart = (candidate?: string) => Boolean(candidate && /[A-Za-z\u0590-\u05FF]/.test(candidate));
+      const shouldSplit = isTextStart(next) || (next && quoteChars.includes(next) && isTextStart(nextAfterQuote));
+
+      if (shouldSplit) {
         parts.push(current);
         current = '\u00A0\u00A0\u00A0\u00A0';
       }
@@ -31,7 +36,6 @@ function splitPoeticLine(text: string): string[] {
 
   return parts.length > 0 ? parts : [normalized];
 }
-
 export function formatPsalmChapter(chapter: PsalmChapter): string {
   const renderedLines = chapter.lines
     .map((line) => line.trim())
