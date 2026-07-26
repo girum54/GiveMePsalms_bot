@@ -44,10 +44,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const utcHour = Number(req.query.hour ?? new Date().getUTCHours());
+  const debugMode = String(req.query.debug ?? '').toLowerCase() === 'true' || String(req.query.debug ?? '') === '1';
   await initializeDatabase();
   const db = await getDb();
 
   try {
+    let debugInfo: Record<string, unknown> | undefined;
+    if (debugMode) {
+      const activeUsers = await db
+        .select()
+        .from(users)
+        .where(isNotNull(users.deliveryHour));
+
+      const hourCounts = activeUsers.reduce<Record<string, number>>((counts, user) => {
+        const hourKey = user.deliveryHour === null ? 'null' : String(user.deliveryHour);
+        counts[hourKey] = (counts[hourKey] ?? 0) + 1;
+        return counts;
+      }, {});
+
+      debugInfo = {
+        activeDeliveryUsers: activeUsers.length,
+        hourCounts,
+      };
+    }
+
     const scheduledUsers = await db
       .select()
       .from(users)
@@ -75,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .where(eq(users.telegramId, user.telegramId));
     }
 
-    res.status(200).json({ ok: true, delivered: scheduledUsers.length, hour: utcHour, matchedUsers: scheduledUsers.length });
+    res.status(200).json({ ok: true, delivered: scheduledUsers.length, hour: utcHour, matchedUsers: scheduledUsers.length, debug: debugInfo });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ ok: false, error: messageText });
