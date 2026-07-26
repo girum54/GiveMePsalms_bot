@@ -133,21 +133,21 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
 
   try {
     if (command === '/start') {
-      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot! Send /pause to stop deliveries, /resume to continue, /time to choose a delivery hour in UTC+3, or /chapter to see your current Psalm.');
+      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot. Read the Psalms as poems with gentle rhythm and thoughtful pauses. Use /pause to stop deliveries, /resume to continue, /time to choose a UTC+3 delivery hour, or /chapter to read your current Psalm.');
     } else if (command === '/pause') {
       if (db) {
         await db.update(users)
           .set({ isPaused: true, updatedAt: new Date() })
           .where(eq(users.telegramId, String(chatId)));
       }
-      await sendTelegramMessage(chatId, 'Deliveries are now paused.');
+      await sendTelegramMessage(chatId, 'Your Psalm delivery is paused. Send /resume whenever you are ready to continue.');
     } else if (command === '/resume') {
       if (db) {
         await db.update(users)
           .set({ isPaused: false, updatedAt: new Date() })
           .where(eq(users.telegramId, String(chatId)));
       }
-      await sendTelegramMessage(chatId, 'Deliveries are resumed.');
+      await sendTelegramMessage(chatId, 'Deliveries are resumed. Your Psalm sequence will continue from where it left off.');
     } else if (command === '/time') {
       const hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
       const buttons = hours.map((hour) => {
@@ -157,7 +157,7 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
         return [{ text: `${suffix}${ampm} (${hour} UTC)`, callback_data: `set_time_${hour}` }];
       });
 
-      await sendTelegramMessage(chatId, 'Choose your delivery hour in UTC+3:', {
+      await sendTelegramMessage(chatId, 'Choose your preferred Psalm delivery hour. All times are shown in UTC+3 for easier reading schedule planning.', {
         inline_keyboard: buttons,
       });
     } else if (command === '/chapter') {
