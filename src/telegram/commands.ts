@@ -203,6 +203,18 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
           await sendTelegramMessage(chatId, `${previewLabel}\n\n${formatted}`);
         }
       }
+    } else if (command === '/status') {
+      if (!db) {
+        await sendTelegramMessage(chatId, 'Status is unavailable right now.');
+      } else {
+        const user = await db.select().from(users).where(eq(users.telegramId, String(chatId))).limit(1);
+        const u = user[0];
+        const chapterNum = u?.currentChapter ?? 1;
+        const delivery = u?.deliveryHour ?? null;
+        const paused = u?.isPaused ? 'yes' : 'no';
+        const deliveryText = delivery === null ? 'not set' : `${(delivery + 3) % 24}:00 (UTC+3) — UTC ${delivery}:00`;
+        await sendTelegramMessage(chatId, `Status:\nCurrent chapter: ${chapterNum}\nDelivery hour: ${deliveryText}\nPaused: ${paused}`);
+      }
     } else {
       await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, /time <hour> to set a delivery hour, or /chapter to see your current Psalm.');
     }
