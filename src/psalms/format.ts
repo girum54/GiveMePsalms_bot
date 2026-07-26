@@ -37,10 +37,13 @@ function splitPoeticLine(text: string): string[] {
   return parts.length > 0 ? parts : [normalized];
 }
 export function formatPsalmChapter(chapter: PsalmChapter): string {
-  const renderedLines = chapter.lines
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .flatMap((line) => splitPoeticLine(line));
+  const renderedLines = chapter.lines.flatMap((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return [''];
+    }
+    return splitPoeticLine(line);
+  });
 
   return renderedLines.join('\n');
 }
