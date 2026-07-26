@@ -21,9 +21,9 @@ function splitPoeticLine(text: string): string[] {
       const next = normalized[i + 1];
       const nextAfterQuote = normalized[i + 2];
       const isTextStart = (candidate?: string) => Boolean(candidate && /[A-Za-z\u0590-\u05FF]/.test(candidate));
-      const shouldSplit = isTextStart(next) || (next && quoteChars.includes(next) && isTextStart(nextAfterQuote));
+      const hasFollowingText = isTextStart(next) || (next && quoteChars.includes(next) && isTextStart(nextAfterQuote));
 
-      if (shouldSplit) {
+      if (hasFollowingText) {
         parts.push(current);
         current = '\u00A0\u00A0\u00A0\u00A0';
       }
