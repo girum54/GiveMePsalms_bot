@@ -75,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .where(eq(users.telegramId, user.telegramId));
     }
 
-    res.status(200).json({ ok: true, delivered: scheduledUsers.length });
+    res.status(200).json({ ok: true, delivered: scheduledUsers.length, hour: utcHour, matchedUsers: scheduledUsers.length });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ ok: false, error: messageText });

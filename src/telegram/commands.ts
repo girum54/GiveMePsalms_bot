@@ -113,6 +113,27 @@ export async function upsertUserFromMessage(message: TelegramMessage | undefined
     });
 }
 
+export async function upsertUserFromCallback(callbackQuery: TelegramCallbackQuery, db?: Awaited<ReturnType<typeof getDb>>): Promise<void> {
+  const chatId = callbackQuery.message?.chat?.id;
+  if (!chatId || !db) return;
+
+  await db.insert(users)
+    .values({
+      telegramId: String(chatId),
+      username: 'unknown',
+      currentChapter: 1,
+      deliveryHour: null,
+      isPaused: false,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: users.telegramId,
+      set: {
+        updatedAt: new Date(),
+      },
+    });
+}
+
 export async function handleTelegramCommand(message: TelegramMessage | undefined): Promise<void> {
   const chatId = message?.chat?.id;
   if (!chatId) return;
@@ -211,6 +232,7 @@ export async function handleTelegramCallback(callbackQuery: TelegramCallbackQuer
   try {
     await initializeDatabase();
     const db = await getDb();
+    await upsertUserFromCallback(callbackQuery, db);
     await db.update(users)
       .set({ deliveryHour: hour, updatedAt: new Date() })
       .where(eq(users.telegramId, String(chatId)));
