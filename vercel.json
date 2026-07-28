@@ -1,5 +1,11 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "public"
+  "outputDirectory": "public",
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
