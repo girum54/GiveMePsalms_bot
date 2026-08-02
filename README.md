@@ -1,13 +1,12 @@
 # GiveMePsalms Bot
 
-A Telegram bot that delivers daily Psalms using Vercel serverless functions, Drizzle ORM, and PostgreSQL.
+A Telegram bot that shares Psalms as daily readings using Vercel serverless functions, Drizzle ORM, and PostgreSQL.
 
 ## Features
 
 - `/start` — start the bot and view help.
-- `/pause` — pause daily Psalm deliveries.
-- `/resume` — resume daily Psalm deliveries.
-- `/time` — choose a delivery hour using a UTC+3 inline picker.
+- `/pause` — pause daily Psalm readings.
+- `/resume` — resume daily Psalm readings.
 - `/chapter` — show the user’s current saved Psalm chapter.
 - `/chapter <number>` — preview a specific Psalm without changing the saved chapter.
 
@@ -45,15 +44,14 @@ npm run build
 
 ## Notes
 
-- The bot stores users in PostgreSQL and tracks current Psalm chapter and selected delivery hour.
+- The bot stores users in PostgreSQL and tracks the current Psalm chapter.
+- Psalm readings are sent once per day on a fixed schedule.
 - `/chapter <number>` previews a Psalm without updating the saved chapter.
-- The `/time` command uses UTC+3 labels for user-friendly time selection.
 
 ## Commands
 
 - `/start`
 - `/pause`
 - `/resume`
-- `/time`
 - `/chapter`
 - `/chapter <number>`

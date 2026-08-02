@@ -154,33 +154,23 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
 
   try {
     if (command === '/start') {
-      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot. Read the Psalms as poems with gentle rhythm and thoughtful pauses. Use /pause to stop deliveries, /resume to continue, /time to choose a UTC+3 delivery hour, or /chapter to read your current Psalm.');
+      await sendTelegramMessage(chatId, 'Welcome to GiveMePsalms Bot. Read the Psalms as poems with gentle rhythm and thoughtful pauses. Use /pause to stop daily readings, /resume to continue, or /chapter to read your current Psalm.');
     } else if (command === '/pause') {
       if (db) {
         await db.update(users)
           .set({ isPaused: true, updatedAt: new Date() })
           .where(eq(users.telegramId, String(chatId)));
       }
-      await sendTelegramMessage(chatId, 'Your Psalm delivery is paused. Send /resume whenever you are ready to continue.');
+      await sendTelegramMessage(chatId, 'Your daily Psalm reading is paused. Send /resume whenever you are ready to continue.');
     } else if (command === '/resume') {
       if (db) {
         await db.update(users)
           .set({ isPaused: false, updatedAt: new Date() })
           .where(eq(users.telegramId, String(chatId)));
       }
-      await sendTelegramMessage(chatId, 'Deliveries are resumed. Your Psalm sequence will continue from where it left off.');
+      await sendTelegramMessage(chatId, 'Daily Psalm readings are resumed. Your Psalm sequence will continue from where it left off.');
     } else if (command === '/time') {
-      const hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
-      const buttons = hours.map((hour) => {
-        const localHour = (hour + 3) % 24;
-        const suffix = localHour === 0 ? 12 : localHour > 12 ? localHour - 12 : localHour;
-        const ampm = localHour >= 12 ? 'PM' : 'AM';
-        return [{ text: `${suffix}${ampm} (${hour} UTC)`, callback_data: `set_time_${hour}` }];
-      });
-
-      await sendTelegramMessage(chatId, 'Choose your preferred Psalm delivery hour. All times are shown in UTC+3 for easier reading schedule planning.', {
-        inline_keyboard: buttons,
-      });
+      await sendTelegramMessage(chatId, 'The /time feature is temporarily unavailable. Psalm readings continue once each day on the fixed schedule.');
     } else if (command === '/chapter') {
       if (!db) {
         await sendTelegramMessage(chatId, 'Chapter preview is unavailable right now.');
@@ -210,13 +200,11 @@ export async function handleTelegramCommand(message: TelegramMessage | undefined
         const user = await db.select().from(users).where(eq(users.telegramId, String(chatId))).limit(1);
         const u = user[0];
         const chapterNum = u?.currentChapter ?? 1;
-        const delivery = u?.deliveryHour ?? null;
         const paused = u?.isPaused ? 'yes' : 'no';
-        const deliveryText = delivery === null ? 'not set' : `${(delivery + 3) % 24}:00 (UTC+3) — UTC ${delivery}:00`;
-        await sendTelegramMessage(chatId, `Status:\nCurrent chapter: ${chapterNum}\nDelivery hour: ${deliveryText}\nPaused: ${paused}`);
+        await sendTelegramMessage(chatId, `Status:\nCurrent chapter: ${chapterNum}\nSchedule: one daily Psalm reading\nPaused: ${paused}`);
       }
     } else {
-      await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, /time <hour> to set a delivery hour, or /chapter to see your current Psalm.');
+      await sendTelegramMessage(chatId, 'Send /start to begin, /pause to pause, /resume to resume, or /chapter to see your current Psalm.');
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'Unknown error';
@@ -229,32 +217,11 @@ export async function handleTelegramCallback(callbackQuery: TelegramCallbackQuer
   if (!chatId) return;
 
   const callbackData = callbackQuery.data ?? '';
-  const match = callbackData.match(/^set_time_(\d{1,2})$/);
-  if (!match) {
-    await sendTelegramMessage(chatId, 'Unsupported action.');
+  if (callbackData.startsWith('set_time_')) {
+    await answerTelegramCallbackQuery(callbackQuery.id, 'The time-setting feature is temporarily disabled.');
+    await sendTelegramMessage(chatId, 'The time-setting feature is temporarily disabled. Psalm readings continue once each day on the fixed schedule.');
     return;
   }
 
-  const hour = Number(match[1]);
-  if (Number.isNaN(hour) || hour < 0 || hour > 23) {
-    await sendTelegramMessage(chatId, 'Invalid hour chosen.');
-    return;
-  }
-
-  try {
-    await initializeDatabase();
-    const db = await getDb();
-    await upsertUserFromCallback(callbackQuery, db);
-    await db.update(users)
-      .set({ deliveryHour: hour, updatedAt: new Date() })
-      .where(eq(users.telegramId, String(chatId)));
-
-    const confirmation = `Delivery time set to UTC ${hour}:00. (UTC+3: ${(hour + 3) % 24}:00)`;
-    await answerTelegramCallbackQuery(callbackQuery.id, confirmation);
-    await sendTelegramMessage(chatId, confirmation);
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : 'Unknown error';
-    await answerTelegramCallbackQuery(callbackQuery.id, `Unable to update time: ${reason}`);
-    await sendTelegramMessage(chatId, `Unable to update time: ${reason}`);
-  }
+  await sendTelegramMessage(chatId, 'Unsupported action.');
 }
