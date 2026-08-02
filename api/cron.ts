@@ -43,7 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const utcHour = Number(req.query.hour ?? new Date().getUTCHours());
+  const targetHour = 5;
+  const utcHour = Number(req.query.hour ?? targetHour);
   const debugMode = String(req.query.debug ?? '').toLowerCase() === 'true' || String(req.query.debug ?? '') === '1';
   await initializeDatabase();
   const db = await getDb();

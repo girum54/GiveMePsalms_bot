@@ -4,8 +4,8 @@
   "outputDirectory": "public",
   "crons": [
     {
-      "path": "/api/cron",
-      "schedule": "0 * * * *"
+      "path": "/api/cron?hour=5",
+      "schedule": "0 5 * * *"
     }
   ]
 }
